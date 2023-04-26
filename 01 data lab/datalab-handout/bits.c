@@ -109,9 +109,13 @@ int tmin(void) {
  *   Legal ops: ! ~ & ^ | +
  *   Max ops: 10
  *   Rating: 1
+ * 
+ *  要求：判断 x 是否为补码表示的最大整数。
+    运算：! ~ & ^ | +
+    
  */
 int isTmax(int x) {
-  return 2;
+  return !(~x ^ (x + 1) | !(x + 1));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -120,9 +124,12 @@ int isTmax(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 12
  *   Rating: 2
+ *    要求：判断 x 二进制表示下的奇数位是否全为 1。
  */
 int allOddBits(int x) {
-  return 2;
+  int t = 0xAAAAAAAA;   
+  int y = x & t;
+  return !(t ^ y);
 }
 /* 
  * negate - return -x 
@@ -130,9 +137,10 @@ int allOddBits(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 5
  *   Rating: 2
+ *  要求：计算返回 -x。
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
@@ -143,9 +151,10 @@ int negate(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 15
  *   Rating: 3
+ *  要求：判断值 x 是否在范围 [0x30, 0x39] 中。
  */
 int isAsciiDigit(int x) {
-  return 2;
+  return !((x + ~48 + 1) >> 31) & !!((x + ~58 + 1) >> 31);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -153,9 +162,18 @@ int isAsciiDigit(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 16
  *   Rating: 3
+ *  要求：执行三目运算符 x ? y : z：当 x 不为 0 时，返回 y；否则返回 z。
  */
+
+// 这题nb
+// 主要思想：
+// 取数a用 a & (全1)     
+// 消数a用 a & (全0)
+// ~(全0) = (全1)
+// 是'取'还是'消' 取决于x是否为0
 int conditional(int x, int y, int z) {
-  return 2;
+  x = !x + ~0;
+  return (y & x) | (z & ~x);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -163,10 +181,17 @@ int conditional(int x, int y, int z) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 24
  *   Rating: 3
+ *  要求：判断 x <= y。
+ *  比大小思路很简单：无非就是符号相同就y-x   不同就是看符号
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
-}
+  int x_flag = x >> 31 & 1, y_flag = y >> 31 & 1;   
+  int y_x_flag = (y + ~x + 1) >> 31 & 1;
+  // if (x_flag == y_flag) return y - x >> 31;
+  // else if (x_flag == 0) return 0;
+  // else return 1;
+  return (!(x_flag ^ y_flag) & (!y_x_flag)) | ((x_flag ^ y_flag) & !y_flag);
+  }
 //4
 /* 
  * logicalNeg - implement the ! operator, using all of 
