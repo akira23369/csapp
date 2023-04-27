@@ -19,36 +19,16 @@
   7. Use any data type other than int.  This implies that you
      cannot use arrays, structs, or unions.
 
- 
-  You may assume that your machine:
-  1. Uses 2s complement, 32-bit representations of integers.
-  2. Performs right shifts arithmetically.
-  3. Has unpredictable behavior when shifting if the shift amount
-     is less than 0 or greater than 31.
+
   您可以假设您的机器:
   1. 使用补码,32位整数表示。
   2. 按算术方式执行右移。
   3.如果移位量小于0或大于31,则在移位时具有不可预测的行为。
 
-FLOATING POINT CODING RULES
-
-For the problems that require you to implement floating-point operations,
-the coding rules are less strict.  You are allowed to use looping and
-conditional control.  You are allowed to use both ints and unsigneds.
-You can use arbitrary integer and unsigned constants. You can use any arithmetic,
-logical, or comparison operations on int or unsigned data.
 
 // 对于需要实现浮点操作的问题,编码规则不那么严格。允许使用循环和条件控制。可以同时使用int型和unsigned型。
 // 您可以使用任意整数和无符号常量。可以对int或unsigned数据使用任何算术、逻辑或比较操作。
 
-You are expressly forbidden to:
-  1. Define or use any macros.
-  2. Define any additional functions in this file.
-  3. Call any functions.
-  4. Use any form of casting.
-  5. Use any data type other than int or unsigned.  This means that you
-     cannot use arrays, structs, or unions.
-  6. Use any floating point data types, operations, or constants.
 // 明确禁止您:
 // 1. 定义或使用任意宏。
 // 2. 在此文件中定义任何附加函数。
@@ -185,8 +165,8 @@ int conditional(int x, int y, int z) {
  *  比大小思路很简单：无非就是符号相同就y-x   不同就是看符号
  */
 int isLessOrEqual(int x, int y) {
-  int x_flag = x >> 31 & 1, y_flag = y >> 31 & 1;   
-  int y_x_flag = (y + ~x + 1) >> 31 & 1;
+  int x_flag = x >> 31 & 1, y_flag = y >> 31 & 1;  // x，y符号位 
+  int y_x_flag = (y + ~x + 1) >> 31 & 1;    // y - x 的符号位
   // if (x_flag == y_flag) return y - x >> 31;
   // else if (x_flag == 0) return 0;
   // else return 1;
@@ -200,9 +180,12 @@ int isLessOrEqual(int x, int y) {
  *   Legal ops: ~ & ^ | + << >>
  *   Max ops: 12
  *   Rating: 4 
+ *  计算 !x：当 x = 0 时返回 1；当 x ≠ 0 时返回 0。
+ *  当x不为0时， x | -x  符号位必为 1
  */
 int logicalNeg(int x) {
-  return 2;
+  int pre_flag = (x + 1) >> 31 & 1, ne_flag = (x - 1) >> 31 & 1;
+  return ~((x | (~x + 1)) >> 31) & 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -215,54 +198,87 @@ int logicalNeg(int x) {
  *  Legal ops: ! ~ & ^ | + << >>
  *  Max ops: 90
  *  Rating: 4
+ *  使用二进制补码表示 x 的最少位数。
+ *  当 x ≥ 0 时，位数取决于 1 的最高位数；
+ *  当 x < 0 时，位数则取决于 0 的最高位数（根据补码表示的定义，符号位起连续的 1 可合并起来用一个位表示）。
+ *  首先考虑将负数取反，将问题统一成计算 1 的最高位，利用算术右移即可完成，即 x = x ⊕ ( x >> 31) 。 
+ *  然后使用二分法计算 1 的最高位：判断高 16 位是否大于 0，若大于 0 说明高 16 位中存在 1，否则 1 在低 16 位中。
+ *  使用 conditional 函数更新 x（取出高 16 位或低 16 位）。迭代判断 8 位、4 位等等。
  */
 int howManyBits(int x) {
-  return 0;
+  int s = (x >> 31);              // 不知道为啥这里 x >> 31 & 1不行
+  x = (s & ~x) | (~s & x);
+  int ans = 1, bit = 0;
+
+  bit = !!(x >> 16) << 4;    // 如果高16为不为0，就至少有2^4
+  x >>= bit; ans += bit;
+
+  bit = !!(x >> 8) << 3;
+  x >>= bit; ans += bit;
+
+  bit = !!(x >> 4) << 2;
+  x >>= bit; ans += bit;
+
+  bit = !!(x >> 2) << 1;
+  x >>= bit; ans += bit;
+
+  bit = !!(x >> 1);
+  x >>= bit; ans += bit;
+
+  bit = !!x;
+  x >>= bit; ans += bit;
+
+  return ans;
 }
 //float
 /* 
- * floatScale2 - Return bit-level equivalent of expression 2*f for
- *   floating point argument f.
- *   Both the argument and result are passed as unsigned int's, but
- *   they are to be interpreted as the bit-level representation of
- *   single-precision floating point values.
- *   When argument is NaN, return argument
- *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
- *   Max ops: 30
- *   Rating: 4
- */
+  要求：计算 2 * uf，若 uf 为特殊值值时，直接返回 uf。
+  运算：Integer/unsigned 相关运算；||，&&，if 和 while 等判断语句。
+*/
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  unsigned s = uf >> 31 & 1;
+  unsigned e = (uf >> 23) & 0xff; 
+  unsigned f = uf & 0x7fffff;
+  if (!(e ^ 0xff)) return uf;
+  if (!e) return (s << 31) | (f << 1);
+  return (s << 31) | ((e + 1) << 23) | f;     // 这里e + 1是因为题目需要 *２　后的值
 }
 /* 
- * floatFloat2Int - Return bit-level equivalent of expression (int) f
- *   for floating point argument f.
- *   Argument is passed as unsigned int, but
- *   it is to be interpreted as the bit-level representation of a
- *   single-precision floating point value.
- *   Anything out of range (including NaN and infinity) should return
- *   0x80000000u.
- *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
- *   Max ops: 30
- *   Rating: 4
- */
+要求：将浮点数 uf 转换成整数。
+Anything out of range (including NaN and infinity) should return 0x80000000u.
+运算：Integer/unsigned 相关运算；||，&&，if 和 while 等判断语句。
+*/
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  unsigned s = uf >> 31 & 1;
+  unsigned e = (uf >> 23) & 0xff;
+  unsigned f = uf & 0x7fffff;
+  // 0
+  if (e == 0 && f == 0) return 0;
+  int E = e - 127;
+  // 非规格化
+  if (e == 0) return 0;
+
+  // 特殊值   按照规定返回0x80000000u
+  if (e == 0xff) return 1 << 31;
+
+  // 规格化
+  f = 1 << 23 | f;
+  // 整数最大的表示范围
+  if (E > 31) return 1 << 31;
+  else if (E < 0) return 0;
+
+  if (E >= 23) f <<= E - 23;
+  else f >>= 23 - E;
+  if (s & 1) f = ~f + 1;
+  return f;
 }
 /* 
- * floatPower2 - Return bit-level equivalent of the expression 2.0^x
- *   (2.0 raised to the power x) for any 32-bit integer x.
- *
- *   The unsigned value that is returned should have the identical bit
- *   representation as the single-precision floating-point number 2.0^x.
- *   If the result is too small to be represented as a denorm, return
- *   0. If too large, return +INF.
- * 
- *   Legal ops: Any integer/unsigned operations incl. ||, &&. Also if, while 
- *   Max ops: 30 
- *   Rating: 4
- */
+要求：使用浮点数表示 2^x。无法表示时：过小返回 0，过大返回 +INF。
+运算：Integer/unsigned 相关运算；||，&&，if 和 while 等判断语句。
+*/
 unsigned floatPower2(int x) {
-    return 2;
+  if (x > 127) return 0x7f800000;   // 阶码全为1的数
+  if (x < -126) return 0;
+  return (x + 127) << 23;
 }
 
